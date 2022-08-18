@@ -12,9 +12,9 @@ import (
 // Create func to read in csv file
 // Then print two csv files, with same name 1_ & 2_ appended
 // Ex. mycsv.csv  -> 1_mycsv.csv, 2_mycsv.csv
-// 1_ must have the name of purchased items, as well as the ratio.
-// So if 5 items purchased and 2 of them were "wheels", ratio would be
-// 2 / 5, etc for each item.
+// 1_ must have the name of purchased items, as well as the percentage for each.
+// So if 5 items purchased and 2 of them were "wheels", percentage would be
+// 2 / 5 * 100, for each item.
 
 // 2_ must have the item(s) that were the most popular (total purchases)
 // name of item, total units purchased altogether
