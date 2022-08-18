@@ -1,6 +1,5 @@
-I have not really worked with CSV data using go.
+I have not really worked with CSV data using go, typically I would default to python and use pandas.
 
-Using a basic file of data, simulating purchases of items
-I explore parsing the csv file,
-using data from the file to obtain a percentage of of the values therein
-And also find the total item count to determine the item with the most purchases. 
+That said, this is my attempt at doing a few things with csv data. 
+
+One attempt uses Standard Library and the other will use Gota which is very similar to pandas dataframe.
