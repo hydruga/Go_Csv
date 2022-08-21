@@ -27,6 +27,7 @@ type Order struct {
 }
 
 type Orders map[string][]int
+type Popular map[string]int
 
 func main() {
 	filename := os.Args[1]
@@ -42,63 +43,39 @@ func main() {
 		println(err)
 	}
 
-	orders := Orders{}
-	order_pop := make(map[string]int)
 	var ordersTotal int
-	checkMax := [][]string{
-		{"0", "0"},
-	}
+	orders := Orders{}
+	order_pop := Popular{}
 
 	for _, val := range data {
 		quant, _ := strconv.Atoi(val[3])
+		// Really don't need to do this conversion but it is a little easier to read
 		order := Order{
 			Item:     val[2],
 			Quantity: quant,
 		}
 		// Add to Orders map
 		orders[order.Item] = append(orders[order.Item], order.Quantity)
-		// Add to order_pop map
+		// Add to order_pop map val
 		order_pop[order.Item] += order.Quantity
-		fmt.Println(order_pop[order.Item])
-		// Using the checkMax string array, we look at each item once
-		// Otherwise you would have to reiterate for this information.
-		val, err := strconv.Atoi(checkMax[0][1])
-		if err != nil {
-			println(err)
-		}
-		switch {
-		case val < order_pop[order.Item]:
-			{
-				checkMax[0][0] = order.Item
-				checkMax[0][1] = strconv.Itoa(order.Quantity)
-				fmt.Println("New top val", val, checkMax[0][0], checkMax[0][1])
-				val = order_pop[order.Item]
-
-			}
-		case val == order_pop[order.Item]:
-			{
-				t := fmt.Sprintf("%d", order.Quantity)
-				tempSlice := []string{order.Item, t}
-				checkMax = append(checkMax, tempSlice)
-				fmt.Println("Pushed another topper", order.Item, t)
-			}
-		default:
-		}
-
 		ordersTotal++
 	}
-
 	base := filepath.Base(filename) // get base path for filename
-	err = orders.Write_Ratio(base, ordersTotal-1)
-	if err != nil {
-		println(err)
-	}
 
-	err = Write_Popular(checkMax, base)
+	// Ideally we put these in goroutine
+	err = Write_Ratio(&orders, base, ordersTotal-1)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = Write_Popular(order_pop, filename)
+	if err != nil {
+		fmt.Println(err)
+	}
 
 }
 
-func (o *Orders) Write_Ratio(base string, orderTotal int) error {
+func Write_Ratio(o *Orders, base string, orderTotal int) error {
+	fmt.Println("Writing file now")
 	filename := "1_" + base
 	file, err := os.Create(filename)
 	if err != nil {
@@ -121,7 +98,41 @@ func (o *Orders) Write_Ratio(base string, orderTotal int) error {
 	return nil
 }
 
-func Write_Popular(order [][]string, base string) error {
+func Write_Popular(o Popular, base string) error {
+	var popular []string // Hold the popular keys
+	var checkPopular string
+	var count int
+TOP:
+	for key, val := range o {
+		if len(popular) == 0 {
+			popular = append(popular, key)
+			checkPopular = popular[0]
+			goto TOP
+		}
+		// If we have multiple ties, ideally we sort this to keep from adding
+		// values that are not really popular over time
+		if count > 2 {
+			var temp int
+			for i := 0; i < count-1; i++ {
+				if o[popular[i]] < o[popular[i+1]] {
+					popular = append(popular[:i], popular[i+1:]...)
+				}
+				if o[popular[i]] > o[popular[i+1]] {
+					temp = i + 2
+					popular = append(popular[:i], popular[temp:]...)
+				}
+			}
+		}
+
+		if o[checkPopular] < val {
+			popular = append(popular[0:1], key)
+		}
+		if o[checkPopular] == val {
+			popular = append(popular, key)
+			count++
+		}
+
+	}
 	filename := "2_" + base
 	file, err := os.Create(filename)
 	if err != nil {
@@ -131,8 +142,11 @@ func Write_Popular(order [][]string, base string) error {
 
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
-	for _, value := range order {
-		err = writer.Write(value)
+	for i := 0; i < len(popular); i++ {
+		key := popular[i]
+		val := strconv.Itoa(o[key])
+		fileinfo := []string{key, val}
+		err := writer.Write(fileinfo)
 		if err != nil {
 			return err
 		}
