@@ -99,37 +99,48 @@ func Write_Ratio(o *Orders, base string, orderTotal int) error {
 }
 
 func Write_Popular(o Popular, base string) error {
-	var popular []string // Hold the popular keys
+	var popularSlice []string // Hold the popular keys
 	var checkPopular string
 	var count int
-TOP:
+
 	for key, val := range o {
-		if len(popular) == 0 {
-			popular = append(popular, key)
-			checkPopular = popular[0]
-			goto TOP
+		if len(popularSlice) == 0 {
+			popularSlice = append(popularSlice, key)
+			checkPopular = popularSlice[0]
+
 		}
 		// If we have multiple ties, ideally we sort this to keep from adding
 		// values that are not really popular over time
+		// *** ISSUES WITH THIS CODE CURRENTLY
 		if count > 2 {
 			var temp int
 			for i := 0; i < count-1; i++ {
-				if o[popular[i]] < o[popular[i+1]] {
-					popular = append(popular[:i], popular[i+1:]...)
+				if o[popularSlice[i]] < o[popularSlice[i+1]] {
+					popularSlice = append(popularSlice[:i], popularSlice[i+1:]...)
+					count--
 				}
-				if o[popular[i]] > o[popular[i+1]] {
-					temp = i + 2
-					popular = append(popular[:i], popular[temp:]...)
+				if o[popularSlice[i]] > o[popularSlice[i+1]] {
+					if temp = i + 2; popularSlice[temp] != "" {
+						popularSlice = append(popularSlice[:i+1], popularSlice[temp:]...)
+						count--
+					} else {
+						// need to remove the item but
+						popularSlice = append(popularSlice[:i+1], popularSlice[temp:]...)
+						count--
+					}
 				}
+
 			}
 		}
 
-		if o[checkPopular] < val {
-			popular = append(popular[0:1], key)
-		}
 		if o[checkPopular] == val {
-			popular = append(popular, key)
+			popularSlice = append(popularSlice, key)
 			count++
+		}
+		if o[checkPopular] < val {
+			//popular = append(popular[0:1], key)
+			//Overwrite current val
+			popularSlice[0] = key
 		}
 
 	}
@@ -142,8 +153,9 @@ TOP:
 
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
-	for i := 0; i < len(popular); i++ {
-		key := popular[i]
+
+	for i := 0; i < len(popularSlice); i++ {
+		key := popularSlice[i]
 		val := strconv.Itoa(o[key])
 		fileinfo := []string{key, val}
 		err := writer.Write(fileinfo)
